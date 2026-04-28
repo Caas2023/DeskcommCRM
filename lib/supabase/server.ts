@@ -1,0 +1,32 @@
+/**
+ * Supabase client para Server Components, Route Handlers e Server Actions.
+ *
+ * Lê/escreve cookies via next/headers. Sempre use `getUser()` (valida JWT no
+ * backend), NUNCA `getSession()` (confia no cookie local sem revalidar).
+ */
+
+import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { cookies } from "next/headers";
+import { env } from "@/lib/env";
+
+export async function createClient() {
+  const cookieStore = await cookies();
+
+  return createServerClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY, {
+    cookies: {
+      getAll() {
+        return cookieStore.getAll();
+      },
+      setAll(cookiesToSet) {
+        try {
+          cookiesToSet.forEach(({ name, value, options }: { name: string; value: string; options: CookieOptions }) => {
+            cookieStore.set(name, value, options);
+          });
+        } catch {
+          // setAll pode ser chamado de Server Component; nesse caso, ignoramos.
+          // Refresh de sessão acontece no middleware do Next.
+        }
+      },
+    },
+  });
+}
