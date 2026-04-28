@@ -1,6 +1,6 @@
 ---
 title: Specs Reconciliation Log
-version: 1.0
+version: 1.1
 status: ativo
 date: 2026-04-28
 owner: Rafael Melgaço
@@ -8,96 +8,86 @@ owner: Rafael Melgaço
 
 # Specs Reconciliation Log
 
-> Registro canônico das reconciliações entre Specs 01-09 quando conflitos foram detectados durante o consolidation pass da Spec 09. Decisões aqui **sobrescrevem** texto em specs individuais que conflite — texto antigo permanece pra histórico mas as edições foram aplicadas in-place.
-
-## Contexto
-
-A Spec 09 (Frontend↔Backend Integration Contract) consolidou comunicação ponta-a-ponta antes da implementação das telas P0. Durante o processo, 5 inconsistências de nomenclatura/canonicidade foram detectadas entre Specs anteriores. Resolvidas em 2026-04-28, nesta ordem:
+> Registro canônico das reconciliações entre Specs/Epics quando conflitos são detectados durante consolidation passes. Decisões aqui **sobrescrevem** texto em arquivos individuais que conflite — texto antigo permanece pra histórico mas as edições foram aplicadas in-place.
 
 ## R-01 — Nomenclatura de canal Realtime: plural
 
-**Conflito**: Spec 04 §4.2 usava `useChannelSession` com canal nomeado `org-{orgId}-channel-session` (singular). Spec 09 §6 (Realtime Channel Registry) padronizou todos canais como plural alinhado ao nome da tabela observada.
+**Conflito**: Spec 04 §4.2 usava `useChannelSession` com canal nomeado `org-{orgId}-channel-session` (singular). Spec 09 §6 padronizou plural alinhado ao nome da tabela.
 
-**Decisão canônica**: canal de `useChannelSession` é `channel-sessions-{orgId}` (plural).
+**Decisão canônica**: canal é `channel-sessions-{orgId}` (plural).
 
-**Aplicação**:
-- ✅ Spec 04 §4.2 — texto atualizado in-place
-- ✅ Spec 09 §6 — já usava plural
-
-**Justificativa**: convenção uniforme em todos os 17 canais do registry; nome do canal espelha nome da tabela (`channel_sessions`).
+**Aplicação**: Spec 04 §4.2 atualizado in-place.
 
 ---
 
 ## R-02 — Error code canônico para "sem credencial válida"
 
-**Conflito**: Spec 01 §7.5 catalogou `auth_required` (401). Specs informais e usos coloquiais usaram `unauthenticated`.
+**Conflito**: Spec 01 §7.5 catalogou `auth_required` (401). Specs informais usaram `unauthenticated`.
 
-**Decisão canônica**: **`auth_required`** é o único error code aceito pra HTTP 401 sem credencial. `unauthenticated` é proibido como código (mas pode aparecer em descrições humanas).
+**Decisão canônica**: **`auth_required`** é o único error code aceito pra HTTP 401. `unauthenticated` é proibido como código.
 
-**Aplicação**:
-- ✅ Spec 01 §7.5 — adicionada nota canônica
-- ✅ Spec 09 §8 — já usava `auth_required` exclusivamente
-- 🔁 Code reviews futuras devem rejeitar uso de `unauthenticated` em error codes
+**Aplicação**: Spec 01 §7.5 — nota canônica adicionada.
 
 ---
 
 ## R-03 — Error codes ausentes em Spec 01 §7.5
 
-**Conflito**: Specs 02, 04 e 09 referenciavam codes que não estavam no catálogo canônico de Spec 01 §7.5.
+**Conflito**: Specs 02, 04 e 09 referenciavam codes que não estavam no catálogo canônico.
 
-**Decisão canônica**: 7 novos error codes adicionados a Spec 01 §7.5:
+**Decisão canônica**: 6 novos error codes adicionados a Spec 01 §7.5: `conversation_already_claimed`, `pipeline_immutable_use_clone`, `lost_reason_required`, `lost_reason_invalid`, `phone_must_be_e164`, `merge_irreversible`.
 
-| Code | HTTP | Origem |
-|---|:---:|---|
-| `conversation_already_claimed` | 409 | Spec 04 §9.2 (AT-02 atomic claim) |
-| `pipeline_immutable_use_clone` | 422 | Sub-PRD 02 P-01 |
-| `lost_reason_required` | 422 | Sub-PRD 02 P-03 |
-| `lost_reason_invalid` | 422 | Sub-PRD 02 P-03 |
-| `phone_must_be_e164` | 422 | Spec 02 §3.1 |
-| `merge_irreversible` | 405 | Spec 02 §3.4 (merge_queue) |
-
-**Aplicação**:
-- ✅ Spec 01 §7.5 — tabela ampliada
-- ✅ Spec 09 §8 — error→UI playbook já cobria todos
+**Aplicação**: Spec 01 §7.5 — tabela ampliada.
 
 ---
 
 ## R-04 — OCC com `expected_updated_at` em mutations de leads
 
-**Conflito**: Spec 02 sugeriu Optimistic Concurrency Control via header `If-Unmodified-Since` ou body `expected_updated_at` em mutations de `crm_leads`. Pergunta: a coluna `updated_at` existe e é confiável?
+**Conflito**: Spec 02 sugeriu OCC via `If-Unmodified-Since` ou body `expected_updated_at`. Pergunta: a coluna existe e é confiável?
 
-**Decisão canônica**: **CONFIRMADO**. `crm_leads.updated_at` existe via migration 0003 e é mantida pelo trigger `fn_set_updated_at` em todo UPDATE. Pode ser usada como token OCC em headers `If-Unmodified-Since: <iso>` ou body `expected_updated_at: <iso>`. Em conflito (`updated_at` no servidor > `expected_updated_at` no request), retorna 409 com error code `concurrent_update`.
+**Decisão canônica**: **CONFIRMADO**. `crm_leads.updated_at` existe via migration 0003 com trigger `fn_set_updated_at`. Pode ser usada como token OCC. Em conflito, retorna 409 com error code `concurrent_update`.
 
-**Aplicação**:
-- ✅ Sem mudança em código/spec — comportamento já correto
-- 🔁 Spec 01 §7.5 — adicionar `concurrent_update` (409) em próxima revisão (Wave de implementação)
+**Aplicação**: sem mudança em código/spec — comportamento já correto.
 
 ---
 
 ## R-05 — `connectNuvemshop` como Server Action
 
-**Conflito**: Spec 06 §4.2 documentou OAuth start como rota REST `GET /api/v1/integrations/nuvemshop/connect` que faz redirect. Spec 09 ADR-02 prescreveu Server Actions pra fluxos de form/redirect simples.
+**Conflito**: Spec 06 §4.2 documentou OAuth start como rota REST. Spec 09 ADR-02 prescreveu Server Actions.
 
-**Decisão canônica**: **Server Action `connectNuvemshop()` é o caminho default da UI**. A rota REST permanece como fallback documentado pra clients server-to-server.
+**Decisão canônica**: **Server Action `connectNuvemshop()` é o caminho default da UI**. A rota REST permanece como fallback legacy.
+
+**Aplicação**: Spec 06 §4.2 atualizado + Spec 09 §11 listou Server Actions catalog.
+
+---
+
+## R-06 — Ciclo de dependência EPIC-09 ↔ EPIC-10
+
+**Conflito**: Durante o consolidation pass dos epics (2026-04-28), EPIC-09 (Team) e EPIC-10 (Audit + Settings) declararam um o outro como `depends_on`, criando ciclo:
+- EPIC-09 declarava `depends_on: [EPIC-00, EPIC-01, EPIC-10]` justificando que precisava do helper `auditLog()`
+- EPIC-10 declarava `depends_on: [EPIC-01, EPIC-09]` (sem justificativa estrutural — viewer de audit log não depende de Team)
+
+**Causa raiz**: o helper `auditLog()` é um utilitário de baixo nível (INSERT em `api_audit_log`). Não é uma capacidade de Settings — é uma camada de **foundation** que vários epics consomem.
+
+**Decisão canônica**: helper `auditLog()` (SQL + TS wrapper) é exposto pelo **EPIC-01 Auth & App Shell** (faz sentido — é onde a infra de auth + audit fica wired) e fica disponível pra todos a partir daí.
 
 **Aplicação**:
-- ✅ Spec 06 §4.2 — texto atualizado in-place com nova seção §4.2 (Server Action) e renomeação da seção legacy pra §4.2.1 (fallback)
-- ✅ Spec 09 §11 — `connectNuvemshop` listado no Server Actions catalog
+- ✅ EPIC-09 — `depends_on: [EPIC-00, EPIC-01]` (removeu EPIC-10)
+- ✅ EPIC-10 — `depends_on: [EPIC-00, EPIC-01]` (removeu EPIC-09)
+- 🔁 EPIC-01 deve expor `lib/audit/auditLog.ts` como utilitário (cobrir em uma das suas 12 stories — provavelmente na S-01.06 ao desenhar `useAuth` + audit context, ou story dedicada se necessário)
 
-**Justificativa**: progressive enhancement, type-safe, integra com revalidatePath, padrão Next.js 15.
+**Justificativa**: quebra o ciclo, mantém topological order, permite EPIC-09 e EPIC-10 rodarem em paralelo após EPIC-01.
 
 ---
 
 ## Política pra próximas reconciliações
 
-1. Conflitos detectados durante implementação devem ser logados aqui com IDs sequenciais (R-06, R-07, ...)
-2. Decisões canônicas **sobrescrevem** texto em specs individuais — edição in-place + nota cruzada
+1. Conflitos detectados durante implementação devem ser logados aqui com IDs sequenciais (R-07, R-08, ...)
+2. Decisões canônicas **sobrescrevem** texto em arquivos individuais — edição in-place + nota cruzada
 3. Wave de implementação que tocar uma área conflitada **deve** ler este log antes de codar
-4. Reconciliações que mudam contratos públicos (API endpoints, payloads, error codes) versionam o changelog em `CHANGELOG.md` quando ele existir
+4. Reconciliações que mudam contratos públicos versionam o changelog em `CHANGELOG.md`
 
-## Próximas reconciliações esperadas
+## Próximas reconciliações esperadas (a verificar)
 
-Pontos onde conflitos são prováveis (a verificar em waves futuras):
-- Naming de hooks (`useFoo` vs `useFooQuery` vs `useFooMutation`) — ADR-13 a registrar
-- Convenção de slug pra rotas dinâmicas (`[id]` vs `[fooId]`) — registrar quando a primeira tela for implementada
-- Política de cache TanStack Query (`staleTime`, `gcTime`) por tipo de recurso — Spec 09 §13 deixou genérico
+- Naming de hooks (`useFoo` vs `useFooQuery` vs `useFooMutation`) — ADR a registrar
+- Convenção de slug pra rotas dinâmicas (`[id]` vs `[fooId]`) — registrar quando primeira tela for implementada
+- Política de cache TanStack Query (`staleTime`, `gcTime`) por tipo de recurso
