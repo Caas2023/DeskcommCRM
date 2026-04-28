@@ -423,7 +423,7 @@ export function useChannelSession(orgId: string) {
   const qc = useQueryClient();
 
   const { status } = useRealtimeChannel<ChannelSessionRow>({
-    channel: `org-${orgId}-channel-session`,
+    channel: `channel-sessions-${orgId}`,
     table: "channel_sessions",
     filter: `org_id=eq.${orgId}`,
     onChange: (payload) =>

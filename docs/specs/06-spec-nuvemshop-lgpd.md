@@ -630,7 +630,30 @@ Já listados inline. Critério: cada query do hot path tem index dedicado.
 - Mantém scopes mínimos visíveis ao admin antes do consent
 - Fluxo idêntico pra reconexão (caso de primeira classe — PRD §3.3)
 
-### 4.2 `GET /api/v1/integrations/nuvemshop/connect`
+### 4.2 `connectNuvemshop` — Server Action canônica
+
+> **Nota canônica (RECONCILIATION-LOG vs Spec 09 ADR-02)**: a forma idiomática Next.js 15 pra iniciar OAuth é uma **Server Action** chamada do botão "Conectar Nuvemshop", que internamente faz o `redirect()` pra Nuvemshop authorize URL. Mantém o mesmo `state` token (HMAC-protected) e o mesmo callback `/api/v1/integrations/nuvemshop/callback`. A rota `GET /api/v1/integrations/nuvemshop/connect` abaixo continua existindo como fallback pra clients server-to-server (ex: testes) mas o caminho default da UI é a Server Action.
+
+```ts
+// app/(app)/integrations/nuvemshop/_actions.ts
+'use server';
+import { redirect } from 'next/navigation';
+import { requireOrgAdmin } from '@/lib/auth/guards';
+import { generateOAuthState } from '@/lib/oauth/state';
+
+export async function connectNuvemshop() {
+  const { orgId, userId } = await requireOrgAdmin();
+  const state = await generateOAuthState({ orgId, userId, provider: 'nuvemshop' });
+  const url = new URL('https://www.nuvemshop.com.br/apps/authorize/authorize');
+  url.searchParams.set('client_id', process.env.NUVEMSHOP_CLIENT_ID!);
+  url.searchParams.set('state', state);
+  redirect(url.toString());
+}
+```
+
+Resto da seção descreve a rota REST `GET /connect` legacy/fallback:
+
+### 4.2.1 `GET /api/v1/integrations/nuvemshop/connect` (fallback)
 
 `app/api/v1/integrations/nuvemshop/connect/route.ts`:
 

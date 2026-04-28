@@ -1202,7 +1202,15 @@ export async function rateLimitMiddleware(req: Request, orgId: string) {
 | `rate_limited` | 429 | Janela excedida |
 | `lgpd_anonymization_irreversible` | 403 | Tentativa de update em contact anonimizado (L-04) |
 | `lgpd_in_progress` | 409 | Outro redact pra mesmo contact em execução |
+| `conversation_already_claimed` | 409 | Conversation já tem `assigned_to` quando outro usuário tenta claim atômico (AT-02) |
+| `pipeline_immutable_use_clone` | 422 | Tentativa de mover lead pra outro pipeline (P-01) |
+| `lost_reason_required` | 422 | Lead → status `lost` sem `lost_reason` (P-03) |
+| `lost_reason_invalid` | 422 | `lost_reason` fora da lista canônica (P-03) |
+| `phone_must_be_e164` | 422 | Telefone fora do formato `+\d{8,15}` |
+| `merge_irreversible` | 405 | Tentativa de desfazer merge de contacts (Sub-PRD 02 §3.4) |
 | `internal_error` | 500 | Catch-all, sempre logado em Sentry |
+
+> **Nota canônica (RECONCILIATION-LOG)**: a única forma autorizada pra "sem credencial válida" é `auth_required` (401). Sinônimos como `unauthenticated` ou `not_authenticated` que possam aparecer em specs anteriores são informais — sempre usar `auth_required`.
 
 ### 7.6 Request ID propagation
 
