@@ -20,7 +20,7 @@ const config: VercelConfig = {
   crons: [
     { path: "/api/v1/cron/lgpd-sla-watcher", schedule: "0 12 * * *" },
     // EPIC-13 S-13.07: drains ai_agent.dispatch_requested events.
-    // Atualizado para 0 0 * * * (uma vez por dia) para respeitar o limite do plano Hobby da Vercel.
+    // CORREÇÃO: Alterado para 0 0 * * * (uma vez por dia) devido à limitação do plano Hobby da Vercel.
     { path: "/api/v1/cron/agent-dispatcher", schedule: "0 0 * * *" },
   ],
   functions: {
